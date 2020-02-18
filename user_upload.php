@@ -7,11 +7,26 @@ if ($argc > 1) {
     $conn = connect_db('samuel', 'testtest', '127.0.0.1');
     // Start from the second index
     for ($i = 1; $i < $argc; $i++) {
-
+        // Skip current iteration if it is a file name which is surrounded by []
+        if (substr($argv[$i], 0, 1) === '[' && substr($argv[$i], -1) === ']') {
+            continue;
+        }
         if ($argv[$i] === '--file') {
-            echo 'file';
+            // If --file is presented, a [file name] must be presented right after
+            if (array_key_exists($i+1, $argv)) {
+                if (substr($argv[$i+1], 0, 1) === '[' && substr($argv[$i+1], -1) === ']') {
+                    // extract file name from string
+                    $file_name = substr($argv[$i+1], 1, -1);
+                    echo '================'.$file_name.'================'."\n";
+                } else {
+                    $message = "Error: File name is not supplied, please include file name after --file (e.g. --file [users.csv])\n";
+                    die($message);
+                }
+            } else {
+                $message = "Error: File name is not supplied, please include file name after --file (e.g. --file [users.csv])\n";
+                die($message);
+            }
         } else if ($argv[$i] === '--create_table') {
-            echo 'create_table';
             create_table($conn);
             exit();
         } else if ($argv[$i] === '--dry_run') {
