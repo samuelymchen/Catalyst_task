@@ -12,6 +12,8 @@ if ($argc > 1) {
             echo 'file';
         } else if ($argv[$i] === '--create_table') {
             echo 'create_table';
+            create_table($conn);
+            exit();
         } else if ($argv[$i] === '--dry_run') {
             $dry_run = true;
             echo 'dry run';
@@ -45,4 +47,33 @@ function connect_db($user, $password, $host) {
         $message = "Error: Cannot connect to database, because: \n".$err->getMessage()."\n";
         die($message);
     }
+}
+
+function create_table($conn) {
+    // Drop table if exist
+    try {
+        $drop_script = 'DROP TABLE IF EXISTS "user"';
+        $conn->exec($drop_script);
+    } catch (Exception $err) {
+        $message = "Error: Error dropping existing user table, because:\n".$err->getMessage()."\n";
+        die($message);
+    }
+    fwrite(STDOUT, "Drop user table successfully\n");
+
+    // Create user table
+    try {
+        $create_script = 'CREATE TABLE "user" (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            surname TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL
+        )';
+
+        $conn->exec($create_script);
+    } catch (Exception $err) {
+        $message = "Error: Error creating user table, because:\n".$err->getMessage()."\n";
+        die($message);
+    }
+
+    fwrite(STDOUT, "Create user table successfully\n");
 }
