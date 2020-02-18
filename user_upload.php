@@ -11,6 +11,7 @@ if ($argc > 1) {
         if (substr($argv[$i], 0, 1) === '[' && substr($argv[$i], -1) === ']') {
             continue;
         }
+
         if ($argv[$i] === '--file') {
             // If --file is presented, a [file name] must be presented right after
             if (array_key_exists($i+1, $argv)) {
@@ -31,7 +32,7 @@ if ($argc > 1) {
         } else if ($argv[$i] === '--dry_run') {
             $dry_run = true;
         } else if ($argv[$i] === '--help') {
-            echo 'help';
+
         } else {
             // Check if -u, -p, -h is supplied
             $get_parameter = substr($argv[$i], 0, 2);
@@ -78,7 +79,7 @@ if ($argc > 1) {
         die($message);
     }
 
-        $conn = connect_db($user, $password, $host);
+    $conn = connect_db($user, $password, $host);
 
 //    $conn = connect_db('samuel', 'testtest', '127.0.0.1');
 
@@ -89,7 +90,7 @@ if ($argc > 1) {
     }
 
     // If nothing goes wrong, read csv file and store
-
+    read_csv($file_name, $conn, $dry_run);
 } else {
     $message = "Error: No parameter is presented, please run $ php user_upload.php --help for more information\n";
     die($message);
@@ -99,19 +100,21 @@ function connect_db($user, $password, $host) {
     try{
         // create a PostgreSQL database connection
         $conn = new PDO("pgsql:host=$host;dbname=mydatabasename;user=$user;password=$password");
-
-        // display a message if connected to the PostgreSQL successfully
-        if($conn){
-            echo "Connect to database successfully!\n";
-        }
         // allow PDO to throw exceptions
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // display a message if connected to the PostgreSQL database successfully
+        if($conn){
+            fwrite(STDOUT, "Connect to database successfully!\n");
+        }
+
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 
         return $conn;
     }catch (PDOException $err){
         // report error message
-        $message = "Error: Cannot connect to database, because: \n".$err->getMessage()."\n";
+        $message = "Error: Fail to connect to database, beacuse: \n".$err->getMessage()."\n";
         die($message);
     }
 }
@@ -143,4 +146,110 @@ function create_table($conn) {
     }
 
     fwrite(STDOUT, "Create user table successfully\n");
+}
+
+// Read csv file (ignore first line) and store into db one by one
+function read_csv($file_name, $conn, $dry_run) {
+    // Check if file is a valid .csv file and exists in current directory
+    try {
+        if (substr($file_name, -4) !== '.csv') {
+            throw new Exception("Error: File is not a .csv file\n");
+        }
+
+        if (!file_exists($file_name)) {
+            throw new Exception("Error: File not found\n");
+        }
+
+        $file = fopen($file_name, 'r');
+
+        // Skip the first line
+        fgets($file);
+
+    } catch (Exception $err) {
+        die($err->getMessage()."\n");
+    }
+
+    // Iterate through the csv file row by row
+    for ($i = 0; $row = fgetcsv($file); ++$i) {
+        fwrite(STDOUT, "============================================\n");
+        if ($row !== array(null)) {
+            // format data
+            $user = format_data($row);
+
+            if ($user[0] === '') {
+                // First name is empty
+                $message = "Error: On row ". ($i+2) ." name cannot be empty"."\n";
+                fwrite(STDOUT, $message);
+                continue;
+            }
+
+            if ($user[1] === '') {
+                // Surname is empty
+                $message = "Error: On row ". ($i+2) ." surname cannot be empty"."\n";
+                fwrite(STDOUT, $message);
+                continue;
+            }
+
+            if ($user[1] === '') {
+                // Email is empty
+                $message = "Error: On row ". ($i+2) ." email cannot be empty"."\n";
+                fwrite(STDOUT, $message);
+                continue;
+            }
+
+            // Check if email is valid
+            if (filter_var($user[2], FILTER_VALIDATE_EMAIL)) {
+
+                if ($dry_run) {
+                    $message = 'Found user '.$user[0].' '.$user[1]." (".$user[2].")\n";
+                    fwrite(STDOUT, $message);
+                } else {
+                    // Insert into db
+                    $insert_query = 'INSERT INTO "user" (name, surname, email) VALUES (:name, :surname, :email)';
+
+                    try {
+                        $stmt = $conn->prepare($insert_query);
+
+                        $stmt->bindValue(':name', $user[0]);
+                        $stmt->bindValue(':surname', $user[1]);
+                        $stmt->bindValue(':email', $user[2]);
+
+                        $result = $stmt->execute();
+                    } catch(Exception $err) {
+                        $message = 'Error: Unable to inset user '.$user[0].' '.$user[1]."(".$user[2]."), because:\n".$err->getMessage()."\n";
+                        fwrite(STDOUT, $message);
+                        continue;
+                    }
+
+                    $message = 'User '.$user[0].' '.$user[1]."(".$user[2].") is inserted into database successfully\n";
+                    fwrite(STDOUT, $message);
+                }
+
+            } else {
+                // Email is invalid
+                $message = "Error: On row ". ($i+2) ." Invalid email address: ".$row[2].", user not inserted\n";
+                fwrite(STDOUT, $message);
+                continue;
+            }
+        }
+    }
+
+    fclose($file);
+}
+
+function format_data($user) {
+    // Remove unexpected spaces/tabs from the beginning and end of name string
+    $user[0] = trim($user[0], " \t\n\r\0\x0B");
+    $user[1] = trim($user[1], " \t\n\r\0\x0B");
+    // Remove all whitespaces from email
+    $user[2] = str_replace(' ', '', $user[2]);
+
+    // Capitalise name and surname
+    $user[0] = ucwords(strtolower($user[0]));
+    $user[1] = ucwords(strtolower($user[1]));
+
+    // Make email address to lower case
+    $user[2] = strtolower($user[2]);
+
+    return $user;
 }
