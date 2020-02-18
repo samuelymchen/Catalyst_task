@@ -1,8 +1,11 @@
 <?php
+require_once('dbConnection.php');
+
 // We assume the csv file is called users.csv, unless being specified
-$file_name = 'users.csv';
-$dry_run = false;
-$create_mode = false;
+$fileName = 'users.csv';
+$dryRun = false;
+$createMode = false;
+
 
 if ($argc > 1) {
     // Start from the second index
@@ -17,8 +20,8 @@ if ($argc > 1) {
             if (array_key_exists($i+1, $argv)) {
                 if (substr($argv[$i+1], 0, 1) === '[' && substr($argv[$i+1], -1) === ']') {
                     // extract file name from string
-                    $file_name = substr($argv[$i+1], 1, -1);
-                    echo '================'.$file_name.'================'."\n";
+                    $fileName = substr($argv[$i+1], 1, -1);
+                    echo '================ Reading from: '.$fileName.'================'."\n";
                 } else {
                     $message = "Error: File name is not supplied, please include file name after --file (e.g. --file [users.csv])\n";
                     die($message);
@@ -28,9 +31,9 @@ if ($argc > 1) {
                 die($message);
             }
         } else if ($argv[$i] === '--create_table') {
-            $create_mode = true;
+            $createMode = true;
         } else if ($argv[$i] === '--dry_run') {
-            $dry_run = true;
+            $dryRun = true;
         } else if ($argv[$i] === '--help') {
 
         } else {
@@ -79,18 +82,19 @@ if ($argc > 1) {
         die($message);
     }
 
-    $conn = connect_db($user, $password, $host);
+    $db = new dbConnection('samuel', 'testtest', '127.0.0.1', 'mydatabasename');
+//    $conn = connect_db($user, $password, $host);
 
 //    $conn = connect_db('samuel', 'testtest', '127.0.0.1');
 
     // If --create_table is presented, create table only and no more action
-    if ($create_mode) {
-        create_table($conn);
+    if ($createMode) {
+        create_table($db->connection());
         exit();
     }
 
-    // If nothing goes wrong, read csv file and store
-    read_csv($file_name, $conn, $dry_run);
+    // If nothing goes wrong, read csv file and store data
+    read_csv($fileName, $db->connection(), $dryRun);
 } else {
     $message = "Error: No parameter is presented, please run $ php user_upload.php --help for more information\n";
     die($message);
@@ -114,7 +118,7 @@ function connect_db($user, $password, $host) {
         return $conn;
     }catch (PDOException $err){
         // report error message
-        $message = "Error: Fail to connect to database, beacuse: \n".$err->getMessage()."\n";
+        $message = "Error: Fail to connect to database, because: \n".$err->getMessage()."\n";
         die($message);
     }
 }
@@ -124,7 +128,7 @@ function create_table($conn) {
     try {
         $drop_script = 'DROP TABLE IF EXISTS "user"';
         $conn->exec($drop_script);
-    } catch (Exception $err) {
+    } catch (\PDOException $err) {
         $message = "Error: Error dropping existing user table, because:\n".$err->getMessage()."\n";
         die($message);
     }
@@ -140,7 +144,7 @@ function create_table($conn) {
         )';
 
         $conn->exec($create_script);
-    } catch (Exception $err) {
+    } catch (\PDOException $err) {
         $message = "Error: Error creating user table, because:\n".$err->getMessage()."\n";
         die($message);
     }
@@ -149,18 +153,18 @@ function create_table($conn) {
 }
 
 // Read csv file (ignore first line) and store into db one by one
-function read_csv($file_name, $conn, $dry_run) {
+function read_csv($fileName, $conn, $dryRun) {
     // Check if file is a valid .csv file and exists in current directory
     try {
-        if (substr($file_name, -4) !== '.csv') {
+        if (substr($fileName, -4) !== '.csv') {
             throw new Exception("Error: File is not a .csv file\n");
         }
 
-        if (!file_exists($file_name)) {
+        if (!file_exists($fileName)) {
             throw new Exception("Error: File not found\n");
         }
 
-        $file = fopen($file_name, 'r');
+        $file = fopen($fileName, 'r');
 
         // Skip the first line
         fgets($file);
@@ -200,7 +204,7 @@ function read_csv($file_name, $conn, $dry_run) {
             // Check if email is valid
             if (filter_var($user[2], FILTER_VALIDATE_EMAIL)) {
 
-                if ($dry_run) {
+                if ($dryRun) {
                     $message = 'Found user '.$user[0].' '.$user[1]." (".$user[2].")\n";
                     fwrite(STDOUT, $message);
                 } else {
@@ -215,7 +219,7 @@ function read_csv($file_name, $conn, $dry_run) {
                         $stmt->bindValue(':email', $user[2]);
 
                         $result = $stmt->execute();
-                    } catch(Exception $err) {
+                    } catch(\PDOException $err) {
                         $message = 'Error: Unable to inset user '.$user[0].' '.$user[1]."(".$user[2]."), because:\n".$err->getMessage()."\n";
                         fwrite(STDOUT, $message);
                         continue;
@@ -238,11 +242,12 @@ function read_csv($file_name, $conn, $dry_run) {
 }
 
 function format_data($user) {
-    // Remove unexpected spaces/tabs from the beginning and end of name string
+    // Remove unexpected spaces/tabs from the beginning and end of name strings
     $user[0] = trim($user[0], " \t\n\r\0\x0B");
     $user[1] = trim($user[1], " \t\n\r\0\x0B");
     // Remove all whitespaces from email
-    $user[2] = str_replace(' ', '', $user[2]);
+    $user[2] = preg_replace('/\s+/', '', $user[2]);
+
 
     // Capitalise name and surname
     $user[0] = ucwords(strtolower($user[0]));
