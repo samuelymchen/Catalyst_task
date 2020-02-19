@@ -114,6 +114,15 @@ if ($argc > 1) {
             exit();
         }
 
+        // Check if user table is created
+        try {
+            $drop_script = 'SELECT 1 FROM "user"';
+            $db->connection()->exec($drop_script);
+        } catch (\PDOException $err) {
+            // If there is an error, meaning user table is not created yet
+            die("Cannot find user table, please make sure that --create_table is being executed\n");
+        }
+
         // If nothing goes wrong, read csv file and store data
         read_csv($fileName, $db->connection(), $dryRun);
     } else {
