@@ -1,4 +1,5 @@
 <?php
+use CLIFramework\Component\Table\Table;
 require_once('dbConnection.php');
 
 // We assume the csv file is called users.csv, unless being specified
@@ -35,7 +36,29 @@ if ($argc > 1) {
         } else if ($argv[$i] === '--dry_run') {
             $dryRun = true;
         } else if ($argv[$i] === '--help') {
+            // Read help page from help.txt
+            try {
+                $fileName = 'help.txt';
+                // If file not exist, throw exception
+                if ( !file_exists($fileName) ) {
+                    throw new Exception('help.txt file not found.');
+                }
 
+                $help = fopen('help.txt','r');
+
+                if (!$help) {
+                    throw new Exception('Open help.txt file fail');
+                }
+
+                while ($line = fgets($help)) {
+                    fwrite(STDOUT, $line);
+                }
+                fclose($help);
+            } catch (Exception $err) {
+                $message = "Error: Fail to load help page, because: ".$err->getMessage()."\n";
+                die($message);
+            }
+            exit();
         } else {
             // Check if -u, -p, -h is supplied
             $get_parameter = substr($argv[$i], 0, 2);
@@ -83,10 +106,7 @@ if ($argc > 1) {
             die($message);
         }
 
-        $db = new dbConnection('samuel', 'testtest', '127.0.0.1', 'mydatabasename');
-//    $conn = connect_db($user, $password, $host);
-
-//    $conn = connect_db('samuel', 'testtest', '127.0.0.1');
+        $db = new dbConnection('samuel', 'testtest', '127.0.0.1', 'catalyst_task');
 
         // If --create_table is presented, create table only and no more action
         if ($createMode) {
@@ -241,6 +261,8 @@ function read_csv($fileName, $conn, $dryRun) {
                 fwrite(STDOUT, $message);
                 continue;
             }
+        } else {
+            break;
         }
     }
 
