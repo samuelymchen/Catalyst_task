@@ -1,0 +1,18 @@
+Description:
+  This script is able to create/replace a user table, read from a csv file and store in a PostgreSQL database.
+
+Usage:
+  $ php user_upload.php <options>
+
+Options:
+  --file [file_name]: 	Specify a file name to be parsed, if --file is presented, a[file_name] must be given right after (There is a space between)
+  --create_table: 	This will create/replace a user table (No further action)
+  dry_run: 	This will force the program to read the csv file but not inserting data into database
+  -u: 	PostgreSQL username
+  -p: 	PostgreSQL password
+  -h: 	PostgreSQL host
+  --help: 	This will output the list of directives with details
+
+For more information, please visit:
+https://github.com/samuelymchen/Catalyst_task
+
