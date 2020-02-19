@@ -67,34 +67,40 @@ if ($argc > 1) {
         }
     }
 
-    if (!isset($user)) {
-        $message = "Error: User is not supplied\n";
-        die($message);
-    }
+    if (!$dryRun) {
+        if (!isset($user)) {
+            $message = "Error: User is not supplied\n";
+            die($message);
+        }
 
-    if (!isset($password)) {
-        $message = "Error: Password is not supplied\n";
-        die($message);
-    }
+        if (!isset($password)) {
+            $message = "Error: Password is not supplied\n";
+            die($message);
+        }
 
-    if (!isset($host)) {
-        $message = "Error: Host is not supplied\n";
-        die($message);
-    }
+        if (!isset($host)) {
+            $message = "Error: Host is not supplied\n";
+            die($message);
+        }
 
-    $db = new dbConnection('samuel', 'testtest', '127.0.0.1', 'mydatabasename');
+        $db = new dbConnection('samuel', 'testtest', '127.0.0.1', 'mydatabasename');
 //    $conn = connect_db($user, $password, $host);
 
 //    $conn = connect_db('samuel', 'testtest', '127.0.0.1');
 
-    // If --create_table is presented, create table only and no more action
-    if ($createMode) {
-        create_table($db->connection());
-        exit();
+        // If --create_table is presented, create table only and no more action
+        if ($createMode) {
+            create_table($db->connection());
+            exit();
+        }
+
+        // If nothing goes wrong, read csv file and store data
+        read_csv($fileName, $db->connection(), $dryRun);
+    } else {
+        read_csv($fileName, null, $dryRun);
     }
 
-    // If nothing goes wrong, read csv file and store data
-    read_csv($fileName, $db->connection(), $dryRun);
+
 } else {
     $message = "Error: No parameter is presented, please run $ php user_upload.php --help for more information\n";
     die($message);
