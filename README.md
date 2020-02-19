@@ -66,6 +66,6 @@ $ php user_upload.php -u=user_name -p=password -h=127.0.0.1 --file [some_users.c
 | `-h` | PostgreSQL host |
 | `--help` | This will output the list of directives with details |
 
-## Authors
+## Author
 
 * **Samuel Yi Ming Chen** - samuelyimingchen@gmail.com
