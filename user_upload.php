@@ -125,8 +125,10 @@ if ($argc > 1) {
 
         // If nothing goes wrong, read csv file and store data
         read_csv($fileName, $db->connection(), $dryRun);
-    } else {
+    } else if ($dryRun && !$createMode) {
         read_csv($fileName, null, $dryRun);
+    } else {
+        die("Error: --dry_run and --create_table cannot be used together\n");
     }
 
 
