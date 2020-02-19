@@ -1,5 +1,4 @@
 <?php
-use CLIFramework\Component\Table\Table;
 require_once('dbConnection.php');
 
 // We assume the csv file is called users.csv, unless being specified
