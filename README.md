@@ -1,9 +1,8 @@
 # Catalyst php task
+
 This is the repo for Catalyst php coding task, which reads from a csv file and store user information into a dedicated PostgreSQL database.
 
 ## Getting Started
-
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
 
 These instructions will get a copy of the project up and running on your local machine or deployment environment. Please see the necessarily requirements and available options.
 
